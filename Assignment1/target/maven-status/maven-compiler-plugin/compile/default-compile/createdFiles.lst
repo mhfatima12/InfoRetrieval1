@@ -1,3 +1,4 @@
-com\example\lucene\CranfieldIndexer.class
 com\example\lucene\CranfieldSearcher.class
+com\example\lucene\CranqrelFormatter.class
+com\example\lucene\CranfieldIndexer.class
 com\example\lucene\App.class
