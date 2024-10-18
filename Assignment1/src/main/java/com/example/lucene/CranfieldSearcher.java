@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
@@ -41,8 +41,8 @@ public class CranfieldSearcher {
         searcher.setSimilarity(new BooleanSimilarity());
 
         // Analyzer (should match the one used during indexing)
-        //Analyzer analyzer = new StandardAnalyzer();
-        Analyzer analyzer = new EnglishAnalyzer();
+        Analyzer analyzer = new StandardAnalyzer();
+        //Analyzer analyzer = new EnglishAnalyzer();
 
         // Multi-field query parser to search across Title, Content, and Author
         MultiFieldQueryParser parser = new MultiFieldQueryParser(
