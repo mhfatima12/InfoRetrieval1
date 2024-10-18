@@ -75,15 +75,16 @@ public class CranfieldSearcher {
                 queryMap.put(currentQueryID, queryBuilder.toString().trim());
             }
 
-            // For each query, perform the search and save top 50 results
+            // For each query from 1 to 225, perform the search
             for (int queryID = 1; queryID <= 225; queryID++) { // Ensure we process 1 to 225
-                String queryIDStr = String.valueOf(queryID);
+                String queryIDStr = String.format("%d", queryID);
                 String queryString = queryMap.get(queryIDStr);
 
                 if (queryString == null) {
                     // Handle the case where the query string is missing
-                    // You can log or handle it in a way that makes sense for your application
                     System.err.println("No query found for ID: " + queryIDStr);
+                    // Optionally write a placeholder result for missing queries
+                    resultsWriter.write(String.format("%s Q0 -1 1 0 STANDARD\n", queryIDStr)); // Placeholder for no docID
                     continue; // Skip this query
                 }
 
@@ -93,20 +94,15 @@ public class CranfieldSearcher {
                 // Execute search
                 ScoreDoc[] hits = searcher.search(query, 50).scoreDocs; // Get top 50 results
 
-                if (hits.length == 0) {
-                    // If no results for this query, write a line with a placeholder for docID
-                    resultsWriter.write(String.format("%s Q0 -1 1 0 STANDARD\n", queryIDStr)); // Placeholder for no docID
-                } else {
-                    // Record results in TREC format (query-id Q0 doc-id rank score STANDARD)
-                    for (int i = 0; i < hits.length; i++) {
-                        Document doc = searcher.doc(hits[i].doc);
-                        String docID = doc.get("ID"); // Ensure this is the actual document ID in the index
-                        float score = hits[i].score;
-                        int rank = i + 1;
+                // Record results in TREC format (query-id Q0 doc-id rank score STANDARD)
+                for (int i = 0; i < hits.length; i++) {
+                    Document doc = searcher.doc(hits[i].doc);
+                    String docID = doc.get("ID"); // Ensure this is the actual document ID in the index
+                    float score = hits[i].score;
+                    int rank = i + 1;
 
-                        // Write in TREC format: queryID Q0 docID rank score STANDARD
-                        resultsWriter.write(String.format("%s Q0 %s %d %f STANDARD\n", queryIDStr, docID, rank, score));
-                    }
+                    // Write in TREC format: queryID Q0 docID rank score STANDARD
+                    resultsWriter.write(String.format("%s Q0 %s %d %f STANDARD\n", queryIDStr, docID, rank, score));
                 }
             }
         }
