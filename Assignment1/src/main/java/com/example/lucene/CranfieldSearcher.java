@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
@@ -40,7 +40,8 @@ public class CranfieldSearcher {
         searcher.setSimilarity(new BM25Similarity()); // BM25 similarity
 
         // Analyzer (should match the one used during indexing)
-        Analyzer analyzer = new StandardAnalyzer();
+        //Analyzer analyzer = new StandardAnalyzer();
+        Analyzer analyzer = new EnglishAnalyzer();
 
         // Multi-field query parser to search across Title, Content, and Author
         MultiFieldQueryParser parser = new MultiFieldQueryParser(
@@ -85,29 +86,30 @@ public class CranfieldSearcher {
                     System.err.println("No query found for ID: " + queryIDStr);
                     // Optionally write a placeholder result for missing queries
                     resultsWriter.write(String.format("%s Q0 -1 1 0 STANDARD\n", queryIDStr)); // Placeholder for no docID
-                    continue; // Skip this query
+                    continue; 
                 }
 
                 // Preprocess and parse the query
-                Query query = parser.parse(QueryParser.escape(queryString)); // Escape special characters
+                Query query = parser.parse(QueryParser.escape(queryString)); 
 
                 // Execute search
-                ScoreDoc[] hits = searcher.search(query, 50).scoreDocs; // Get top 50 results
+                ScoreDoc[] hits = searcher.search(query, 50).scoreDocs; 
 
-                // Record results in TREC format (query-id Q0 doc-id rank score STANDARD)
+              
                 for (int i = 0; i < hits.length; i++) {
                     Document doc = searcher.doc(hits[i].doc);
-                    String docID = doc.get("ID"); // Ensure this is the actual document ID in the index
+                    String docID = doc.get("ID"); 
                     float score = hits[i].score;
                     int rank = i + 1;
 
                     // Write in TREC format: queryID Q0 docID rank score STANDARD
-                    resultsWriter.write(String.format("%s Q0 %s %d %f STANDARD\n", queryIDStr, docID, rank, score));
+                    resultsWriter.write(String.format("%s Q0 %s %d %.6f STANDARD\n", queryIDStr, docID, rank, score));
+                    //writer.write(String.format("%s Q0 %s %d %.6f STANDARD", queryCount, docId, rank, score));
                 }
             }
         }
 
-        reader.close(); // Close the index reader
+        reader.close(); 
         System.out.println("Results saved to " + resultsFilePath);
     }
 }

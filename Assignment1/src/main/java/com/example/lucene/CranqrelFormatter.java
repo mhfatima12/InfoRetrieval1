@@ -21,6 +21,11 @@ public class CranqrelFormatter {
                 String docID = parts[1];
                 String relevanceScore = parts[2];
 
+                // Change relevanceScore from -1 to 5 if necessary
+                if ("-1".equals(relevanceScore)) {
+                    relevanceScore = "5"; // Replace -1 with 5
+                }
+
                 // Write in the new format: <query_id> 0 <document_id> <relevance_score>
                 bw.write(String.format("%s 0 %s %s\n", queryID, docID, relevanceScore));
             }
