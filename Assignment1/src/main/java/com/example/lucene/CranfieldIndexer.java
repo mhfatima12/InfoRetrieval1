@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import   org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
@@ -43,8 +43,8 @@ public class CranfieldIndexer {
         }
 
         // Initialize the Lucene components
-        Analyzer analyzer = new StandardAnalyzer();
-        //Analyzer analyzer = new EnglishAnalyzer();
+        //Analyzer analyzer = new StandardAnalyzer();
+        Analyzer analyzer = new EnglishAnalyzer();
         
         Directory index = FSDirectory.open(Paths.get(indexPath));
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
@@ -145,7 +145,8 @@ public class CranfieldIndexer {
         IndexSearcher searcher = new IndexSearcher(reader);
 
         // Use the same analyzer for search as you did for indexing
-        Analyzer analyzer = new StandardAnalyzer();
+        //Analyzer analyzer = new StandardAnalyzer();
+        Analyzer analyzer = new EnglishAnalyzer();
         QueryParser parser = new QueryParser("Content", analyzer);
         Query query = parser.parse(queryString);
 
