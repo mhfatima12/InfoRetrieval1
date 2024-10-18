@@ -76,9 +76,16 @@ public class CranfieldSearcher {
             }
 
             // For each query, perform the search and save top 50 results
-            for (Map.Entry<String, String> entry : queryMap.entrySet()) {
-                String queryID = entry.getKey(); // This should match the query IDs in cranqrel
-                String queryString = entry.getValue();
+            for (int queryID = 1; queryID <= 225; queryID++) { // Ensure we process 1 to 225
+                String queryIDStr = String.valueOf(queryID);
+                String queryString = queryMap.get(queryIDStr);
+
+                if (queryString == null) {
+                    // Handle the case where the query string is missing
+                    // You can log or handle it in a way that makes sense for your application
+                    System.err.println("No query found for ID: " + queryIDStr);
+                    continue; // Skip this query
+                }
 
                 // Preprocess and parse the query
                 Query query = parser.parse(QueryParser.escape(queryString)); // Escape special characters
@@ -88,7 +95,7 @@ public class CranfieldSearcher {
 
                 if (hits.length == 0) {
                     // If no results for this query, write a line with a placeholder for docID
-                    resultsWriter.write(String.format("%s Q0 -1 1 0 STANDARD\n", queryID)); // -1 or some placeholder for no docID
+                    resultsWriter.write(String.format("%s Q0 -1 1 0 STANDARD\n", queryIDStr)); // Placeholder for no docID
                 } else {
                     // Record results in TREC format (query-id Q0 doc-id rank score STANDARD)
                     for (int i = 0; i < hits.length; i++) {
@@ -98,7 +105,7 @@ public class CranfieldSearcher {
                         int rank = i + 1;
 
                         // Write in TREC format: queryID Q0 docID rank score STANDARD
-                        resultsWriter.write(String.format("%s Q0 %s %d %f STANDARD\n", queryID, docID, rank, score));
+                        resultsWriter.write(String.format("%s Q0 %s %d %f STANDARD\n", queryIDStr, docID, rank, score));
                     }
                 }
             }
