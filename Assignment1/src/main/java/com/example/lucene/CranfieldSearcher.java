@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
@@ -85,13 +86,15 @@ public class CranfieldSearcher {
                 // Execute search
                 ScoreDoc[] hits = searcher.search(query, 50).scoreDocs; // Get top 50 results
 
-                // Record results in TREC format (query-id Q0 rank score STANDARD)
+                // Record results in TREC format (query-id Q0 doc-id rank score standard)
                 for (int i = 0; i < hits.length; i++) {
+                    Document doc = searcher.doc(hits[i].doc);
+                    String docID = doc.get("ID");
                     float score = hits[i].score;
                     int rank = i + 1;
 
-                    // Write in TREC format: queryID Q0 rank score STANDARD
-                    resultsWriter.write(String.format("%s Q0 %d %f STANDARD\n", queryID, rank, score));
+                    // Write in TREC format: queryID Q0 docID rank score STANDARD
+                    resultsWriter.write(String.format("%s Q0 %s %d %f STANDARD\n", queryID, docID, rank, score));
                 }
             }
         }
