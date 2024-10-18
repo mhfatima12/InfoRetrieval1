@@ -17,7 +17,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -37,9 +37,9 @@ public class CranfieldSearcher {
         // Load the index and initialize searcher
         DirectoryReader reader = DirectoryReader.open(index);
         IndexSearcher searcher = new IndexSearcher(reader);
-        //searcher.setSimilarity(new BM25Similarity()); // BM25 similarity
+        searcher.setSimilarity(new BM25Similarity()); // BM25 similarity
         //searcher.setSimilarity(new BooleanSimilarity());
-        searcher.setSimilarity(new ClassicSimilarity());
+        //searcher.setSimilarity(new ClassicSimilarity());
 
         // Analyzer (should match the one used during indexing)
         //Analyzer analyzer = new StandardAnalyzer();
