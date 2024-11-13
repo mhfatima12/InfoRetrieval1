@@ -103,7 +103,7 @@ public class CranfieldSearcher {
         String analyzerName = analyzer.getClass().getSimpleName();
         String similarityName = indexSearcher.getSimilarity().getClass().getSimpleName();
 
-        String resultsFolderPath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\trec_eval_result";
+        String resultsFolderPath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\trec_eval_result";
         String resultsFile = String.format("%s/trec_eval_results_%s_%s.txt", resultsFolderPath, analyzerName, similarityName);
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFile, true))) {
