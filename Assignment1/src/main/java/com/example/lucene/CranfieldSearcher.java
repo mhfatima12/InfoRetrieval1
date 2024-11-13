@@ -6,6 +6,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -98,39 +100,45 @@ public class CranfieldSearcher {
     }
 
     private static void searchQuery(Integer queryCount, IndexSearcher indexSearcher, Analyzer analyzer, String queryString) throws Exception {
-        String refinedQuery = handleSpecialCharacters(queryString);
-        QueryParser queryParser = new QueryParser("content", analyzer);
-        String analyzerName = analyzer.getClass().getSimpleName();
-        String similarityName = indexSearcher.getSimilarity().getClass().getSimpleName();
+    String refinedQuery = handleSpecialCharacters(queryString);
+    QueryParser queryParser = new QueryParser("content", analyzer);
+    String analyzerName = analyzer.getClass().getSimpleName();
+    String similarityName = indexSearcher.getSimilarity().getClass().getSimpleName();
 
-        String resultsFolderPath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\trec_eval_result";
-        String resultsFile = String.format("%s/trec_eval_results_%s_%s.txt", resultsFolderPath, analyzerName, similarityName);
+    String resultsFolderPath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\trec_eval_result";
+    String resultsFile = String.format("%s/trec_eval_results_%s_%s.txt", resultsFolderPath, analyzerName, similarityName);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFile, true))) {
-            Query query = queryParser.parse(refinedQuery);
+    // Set to keep track of document IDs and avoid duplicates
+    Set<String> seenDocIds = new HashSet<>();
 
-            // query the index and get top 50 results as needed
-            TopDocs topResults = indexSearcher.search(query, 50);
-            ScoreDoc[] hits = topResults.scoreDocs;
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFile, true))) {
+        Query query = queryParser.parse(refinedQuery);
+        TopDocs topResults = indexSearcher.search(query, 50);
+        ScoreDoc[] hits = topResults.scoreDocs;
 
-            int rank = 1;
+        int rank = 1;
 
-            // iterate through search results and write them to the results file
-            for (ScoreDoc scoreDoc : hits) {
-                Document doc = indexSearcher.doc(scoreDoc.doc);
-                String docId = doc.get("id");
-                float score = scoreDoc.score;
+        for (ScoreDoc scoreDoc : hits) {
+            Document doc = indexSearcher.doc(scoreDoc.doc);
+            String docId = doc.get("id");
 
-                // write result in TREC_eval format
-                writer.write(String.format("%s Q0 %s %d %.6f STANDARD", queryCount, docId, rank, score));
-                writer.newLine();
-
-                rank++;
+            // Skip this document if it's already been seen
+            if (seenDocIds.contains(docId)) {
+                continue;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            seenDocIds.add(docId);
+
+            float score = scoreDoc.score;
+            writer.write(String.format("%s Q0 %s %d %.6f STANDARD", queryCount, docId, rank, score));
+            writer.newLine();
+
+            rank++;
         }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
+
 
     public static void main(String[] args) {
         CranfieldSearcher searcher = new CranfieldSearcher();
