@@ -1,129 +1,151 @@
 package com.example.lucene;
+//import jdk.internal.org.objectweb.asm.tree.analysis.Analyzer;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Path;
+import java.io.*;
+
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.document.Document;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.search.similarities.BM25Similarity;
+import org.apache.lucene.search.similarities.BooleanSimilarity;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.LMDirichletSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.document.Document;
+
+class DocumentData {
+    String doc_id;
+    String doc_title;
+    String doc_author;
+    String doc_content;
+
+    public DocumentData(String doc_id, String doc_title, String doc_author, String doc_content) {
+        this.doc_id = doc_id;
+        this.doc_title = doc_title;
+        this.doc_author = doc_author;
+        this.doc_content = doc_content;
+    }
+
+    @Override
+    public String toString() {
+        return "Id: " + doc_id + "\nTitle: " + doc_title + "\nAuthor: " + doc_author + "\nContent: " + doc_content;
+    }
+}
 
 public class CranfieldIndexer {
+    private static String INDEX_DIRECTORY = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\index";
 
-    public static void main(String[] args) throws Exception {
-        // Path to store the Lucene index
-        String indexPath = "index";  // Directory to store the index
-        
-        // Ensure the directory exists
-        File indexDir = new File(indexPath);
-        if (indexDir.exists()) {
-            for (File file : indexDir.listFiles()) {
-                file.delete();
-            }
-            indexDir.delete();
-        }
+    public void indexDocuments() {
+        List<DocumentData> documents = new ArrayList<>();
+        String id = "";
+        String title = "";
+        String author = "";
+        StringBuilder content = new StringBuilder();
 
-        // Initialize the Lucene components
-        Analyzer analyser = new EnglishAnalyzer();
-        
-        Directory index = FSDirectory.open(Paths.get(indexPath));
-        IndexWriterConfig config = new IndexWriterConfig(analyser);
-        
-        try (IndexWriter writer = new IndexWriter(index, config);
-             FileWriter logWriter = new FileWriter("parsed_data_log.txt")) { // log file writer
-            
-            String filePath = "src\\main\\java\\com\\example\\lucene\\cran.all.1400";
-            parseAndIndexFile(writer, Paths.get(filePath), logWriter); // Passing logWriter to the method
+        boolean readingTitle = false;
+        boolean readingAuthor = false;
+        boolean readingContent = false;
+        int documentCount = 0;
 
-            // Total number of documents indexed
-            System.out.println("Total documents indexed: " + writer.getDocStats().numDocs);
-        }
-    }
-
-    // Parsing and indexing the file
-    private static void parseAndIndexFile(IndexWriter writer, Path filePath, FileWriter logWriter) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath.toFile()))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\src\\main\\java\\com\\example\\lucene\\cran.all.1400"))) {
             String line;
-            Document doc = null;
-            String currentField = "";
-            StringBuilder contentBuilder = new StringBuilder();
+            boolean foundFirstDocument = false; // check if found first document
+            //set up Lucene analyzer and indexing
+            EnglishAnalyzer englishAnalyzer = new EnglishAnalyzer();
+            //Analyzer standardAnalyzer = new StandardAnalyzer();
+            //Analyzer whitespaceAnalyzer = new WhitespaceAnalyzer();
+            Directory directory = FSDirectory.open(Paths.get(INDEX_DIRECTORY));
+            IndexWriterConfig iwConfig = new IndexWriterConfig(englishAnalyzer);
+            //IndexWriterConfig iwConfigStandard = new IndexWriterConfig(standardAnalyzer);
+            //create new index
+            iwConfig.setSimilarity(new BM25Similarity());
+            iwConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+            IndexWriter indexWriter = new IndexWriter(directory, iwConfig);
+
+//            iwConfigStandard.setSimilarity(new LMDirichletSimilarity());
+//            iwConfigStandard.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+//            IndexWriter indexWriter = new IndexWriter(directory, iwConfigStandard);
 
             while ((line = reader.readLine()) != null) {
-                line = line.trim();
+                line = line.trim(); // trim whitespace
 
-                if (line.startsWith(".I")) {
-                    // Index the previous document
-                    if (doc != null) {
-                        // Add the accumulated content to the document
-                        if (contentBuilder.length() > 0) {
-                            doc.add(new TextField("Content", contentBuilder.toString(), Field.Store.YES));
-                            contentBuilder.setLength(0);
-                        }
-                        writer.addDocument(doc);
-                        logParsedData(logWriter, doc);
+                if (line.startsWith(".I ")) { // Document ID
+                    // save the previous document if it exists
+                    if (!id.isEmpty()) {
+                        //ensures that there is a previous document to save
+                        documents.add(new DocumentData(id, title.trim(), author.trim(), content.toString().trim()));
+                        documentCount++;
+                        indexDocument(indexWriter, id, title, author, content.toString());
                     }
-                    // New document
-                    doc = new Document();
-                    String id = line.split("\\s+")[1];
-                    doc.add(new StringField("ID", id, Field.Store.YES));
-                } else if (line.equals(".T")) {
-                    currentField = "Title";
-                } else if (line.equals(".A")) {
-                    currentField = "Author";
-                } else if (line.equals(".B")) {
-                    currentField = "Bibliography";
-                } else if (line.equals(".W")) {
-                    currentField = "Content";
-                } else {
-                    if (currentField.equals("Title")) {
-                        doc.add(new TextField("Title", line, Field.Store.YES));
-                    } else if (currentField.equals("Author")) {
-                        doc.add(new TextField("Author", line, Field.Store.YES));
-                    } else if (currentField.equals("Bibliography")) {
-                        doc.add(new TextField("Bibliography", line, Field.Store.YES));
-                    } else if (currentField.equals("Content")) {
-                        contentBuilder.append(line).append(" ");
-                    }
+                    // reset for the new document
+                    id = line.substring(3).trim(); // Extract ID (after ".I ")
+                    title = ""; //clear title
+                    author = ""; //clear author
+                    content.setLength(0); // clear the content
+                    foundFirstDocument = true; // this is first document found
+                } else if (line.startsWith(".T")) { // Title
+                    readingTitle = true;
+                    readingAuthor = false;
+                    readingContent = false;
+                } else if (line.startsWith(".A")) { // Author
+                    readingAuthor = true;
+                    readingTitle = false;
+                } else if (line.startsWith(".W")) { // Content
+                    readingContent = true;
+                    readingAuthor = false;
+                    readingTitle = false;
+                } else if (readingTitle) {
+                    title += line + " "; // append title
+                } else if (readingAuthor) {
+                    author += line + " "; // append author
+                } else if (readingContent) {
+                    content.append(line).append(" "); // append content
                 }
             }
 
-            // Indexing the last document
-            if (doc != null) {
-                if (contentBuilder.length() > 0) {
-                    doc.add(new TextField("Content", contentBuilder.toString(), Field.Store.YES));
-                }
-                writer.addDocument(doc);
-                logParsedData(logWriter, doc);
+            // add the last document if it exists
+            if (!id.isEmpty()) {
+                documents.add(new DocumentData(id, title.trim(), author.trim(), content.toString().trim()));
+                documentCount++;
+                indexDocument(indexWriter, id, title, author, content.toString());
             }
+
+            indexWriter.close();
+            directory.close();
+
+            // if never found a document, output warning
+            if (!foundFirstDocument) {
+                System.out.println("No documents found in the file.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        for (DocumentData document : documents) {
+            System.out.println(document);
+        }
+
+        System.out.println("Total documents parsed: " + documentCount);
     }
 
-    // Method to log parsed data to a file
-    private static void logParsedData(FileWriter logWriter, Document doc) throws IOException {
-        String id = doc.get("ID");
-        String title = doc.get("Title");
-        String author = doc.get("Author");
-        String bibliography = doc.get("Bibliography");
-        String content = doc.get("Content");
-
-        // Logging the data in a readable format
-        logWriter.write("Document ID: " + id + "\n");
-        logWriter.write("Title: " + title + "\n");
-        logWriter.write("Author: " + author + "\n");
-        logWriter.write("Bibliography: " + bibliography + "\n");
-        logWriter.write("Content: " + content + "\n");
-        logWriter.write("--------------------------------------------------\n"); // Separator for each document
-        logWriter.flush(); // Ensure data is written to file
+    // index of 1400 document collection using Lucene with required fields
+    private static void indexDocument(IndexWriter iwriter, String id, String title, String author, String content) throws IOException {
+        Document indexDoc = new Document();
+        indexDoc.add(new StringField("id", id, Field.Store.YES));
+        indexDoc.add(new TextField("title", title, Field.Store.YES));
+        indexDoc.add(new TextField("author", author, Field.Store.YES));
+        indexDoc.add(new TextField("content", content, Field.Store.YES));
+        iwriter.addDocument(indexDoc);
     }
 }
