@@ -1,150 +1,113 @@
 package com.example.lucene;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import   org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
 public class CranfieldSearcher {
-    private static String INDEX_DIRECTORY = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\index";
-    private static String QUERY_FILE = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\src\\main\\java\\com\\example\\lucene\\cran.qry";
 
-    public void processQueries() {
-        try {
-            // open the index
-            Directory directory = FSDirectory.open(Paths.get(INDEX_DIRECTORY));
-            DirectoryReader directoryReader = DirectoryReader.open(directory);
-            IndexSearcher indexSearcher = new IndexSearcher(directoryReader);
-            //StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
-            EnglishAnalyzer engAnalyzer = new EnglishAnalyzer();
-            //Analyzer whitespaceAnalyzer = new WhitespaceAnalyzer();
+    public static void main(String[] args) throws Exception {
+       
+        String indexPath = "index";
+        Directory index = FSDirectory.open(Paths.get(indexPath));
+        String queryFilePath = "src\\main\\java\\com\\example\\lucene\\cran.qry";
+        String resultsFilePath = "results.txt";
 
-            //pick Lucene similarity by commenting out the similarities you aren't using
-            //Lucene's original term frequency-inverse document frequency (TF-IDF) similarity
-            indexSearcher.setSimilarity(new BM25Similarity());
-            //BM25 similarity
-            //indexSearcher.setSimilarity(new BM25Similarity());
-            //Instantiates the similarity with the default Î¼ value of 2000
-            //indexSearcher.setSimilarity(new LMDirichletSimilarity());
+        // Load the index and initialize searcher
+        DirectoryReader reader = DirectoryReader.open(index);
+        IndexSearcher searcher = new IndexSearcher(reader);
+        searcher.setSimilarity(new BM25Similarity()); // BM25 similarity
+        //searcher.setSimilarity(new BooleanSimilarity());
+        //searcher.setSimilarity(new ClassicSimilarity());
 
-            System.out.println("INDEX SIMILARITY " + indexSearcher.getSimilarity());
+        // Analyser
+        //Analyzer analyser = new StandardAnalyzer();
+        Analyzer analyser = new EnglishAnalyzer();
 
-            // read queries
-            try (BufferedReader queryReader = new BufferedReader(new FileReader(QUERY_FILE))) {
-                String line;
-                int queryCount = 0;
+        // Multi-field query parser to search across Title, Content, and Author
+        MultiFieldQueryParser parser = new MultiFieldQueryParser(
+                new String[]{"Title", "Content", "Author"}, analyser);
 
-                while ((line = queryReader.readLine()) != null) {
-                    // if line startswith .w then read in line of data until line starts with .i
-                    if (line.startsWith(".W")) {
-                        // get query ID
-                        queryCount++;
-                        StringBuilder queryText = new StringBuilder();
+        // Reading and processing each query
+        try (BufferedReader queryReader = new BufferedReader(new FileReader(queryFilePath));
+             FileWriter resultsWriter = new FileWriter(new File(resultsFilePath))) {
 
-                        // read query text
-                        while ((line = queryReader.readLine()) != null && !line.startsWith(".I")) {
-                            queryText.append(line).append(" ");
-                        }
+            String line;
+            Map<String, String> queryMap = new HashMap<>();
+            StringBuilder queryBuilder = new StringBuilder();
+            String currentQueryID = null;
 
-                        // perform search for this query
-                        String queryString = queryText.toString().trim();
-                        searchQuery(queryCount, indexSearcher, engAnalyzer, queryString);
+            while ((line = queryReader.readLine()) != null) {
+                if (line.startsWith(".I")) {
+                    // Savign the previous query
+                    if (currentQueryID != null) {
+                        queryMap.put(currentQueryID, queryBuilder.toString().trim());
+                        queryBuilder.setLength(0);
                     }
+                    currentQueryID = line.split("\\s+")[1]; 
+                } else if (line.startsWith(".W")) {
+                    continue; 
+                } else {
+                    queryBuilder.append(line).append(" ");
                 }
-                System.out.println("Processing query number: " + queryCount);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
 
-            directoryReader.close();
-            directory.close();
+            // Saving the last query
+            if (currentQueryID != null) {
+                queryMap.put(currentQueryID, queryBuilder.toString().trim());
+            }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+            // For each query from 1 to 225, performign the search
+            for (int queryID = 1; queryID <= 225; queryID++) { // Ensure we process 1 to 225
+                String queryIDStr = String.format("%d", queryID);
+                String queryString = queryMap.get(queryIDStr);
 
-    public static String handleSpecialCharacters(String queryStr) {
-        // escape Lucene special characters, allow * and ? as wildcards unless they appear at start
-        String[] tokens = queryStr.split("\\s+");
-        StringBuilder escapedQuery = new StringBuilder();
+                if (queryString == null) {
+                    // Handling the case where the query string is missing
+                    System.err.println("No query found for ID: " + queryIDStr);
+              
+                    resultsWriter.write(String.format("%s Q0 -1 1 0 STANDARD\n", queryIDStr)); // Placeholder for no docID
+                    continue; 
+                }
 
-        for (String token : tokens) {
-            // escape the token if it starts with * or ?
-            if (token.startsWith("*") || token.startsWith("?")) {
-                // avoid wildcards by appending whole token
-                escapedQuery.append(QueryParser.escape(token)).append(" ");
-            } else {
-                // leave * and ? in place
-                escapedQuery.append(token).append(" ");
+                // Preprocessing and parsing the query
+                Query query = parser.parse(QueryParser.escape(queryString)); 
+
+                // Executing the search
+                ScoreDoc[] hits = searcher.search(query, 50).scoreDocs; 
+
+              
+                for (int i = 0; i < hits.length; i++) {
+                    Document doc = searcher.doc(hits[i].doc);
+                    String docID = doc.get("ID"); 
+                    float score = hits[i].score;
+                    int rank = i + 1;
+
+                    // Writ ingin TREC format for TREC metric
+                    resultsWriter.write(String.format("%s Q0 %s %d %.6f STANDARD\n", queryIDStr, docID, rank, score));
+                    //resultsWriter.write(String.format("%s Q0 %s %d %.6f STANDARD", queryCount, docId, rank, score));
+                }
             }
         }
-        return escapedQuery.toString().trim();
+
+        reader.close(); 
+        System.out.println("Results saved to " + resultsFilePath);
     }
-
-    private static void searchQuery(Integer queryCount, IndexSearcher indexSearcher, Analyzer analyzer, String queryString) throws Exception {
-    String refinedQuery = handleSpecialCharacters(queryString);
-    QueryParser queryParser = new QueryParser("content", analyzer);
-    String analyzerName = analyzer.getClass().getSimpleName();
-    String similarityName = indexSearcher.getSimilarity().getClass().getSimpleName();
-
-    String resultsFolderPath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\trec_eval_result";
-    String resultsFile = String.format("%s/trec_eval_results_%s_%s.txt", resultsFolderPath, analyzerName, similarityName);
-
-    // Set to keep track of document IDs and avoid duplicates
-    Set<String> seenDocIds = new HashSet<>();
-
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFile, true))) {
-        Query query = queryParser.parse(refinedQuery);
-        TopDocs topResults = indexSearcher.search(query, 50);
-        ScoreDoc[] hits = topResults.scoreDocs;
-
-        int rank = 1;
-
-        for (ScoreDoc scoreDoc : hits) {
-            Document doc = indexSearcher.doc(scoreDoc.doc);
-            String docId = doc.get("id");
-
-            // Skip this document if it's already been seen
-            if (seenDocIds.contains(docId)) {
-                continue;
-            }
-            seenDocIds.add(docId);
-
-            float score = scoreDoc.score;
-            writer.write(String.format("%s Q0 %s %d %.6f STANDARD", queryCount, docId, rank, score));
-            writer.newLine();
-
-            rank++;
-        }
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-}
-
-
-    public static void main(String[] args) {
-        CranfieldSearcher searcher = new CranfieldSearcher();
-        searcher.processQueries();
-    }
-    
-
-
 }
