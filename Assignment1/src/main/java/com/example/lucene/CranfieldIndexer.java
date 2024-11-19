@@ -38,7 +38,7 @@ class DocumentData {
 }
 
 public class CranfieldIndexer {
-    private static String INDEX_DIRECTORY = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\index";
+    private static String INDEX_DIRECTORY = "index";
 
     public void indexDocuments() {
         List<DocumentData> documents = new ArrayList<>();
@@ -52,7 +52,7 @@ public class CranfieldIndexer {
         boolean readingContent = false;
         int documentCount = 0;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\src\\main\\java\\com\\example\\lucene\\cran.all.1400"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("src\\main\\java\\com\\example\\lucene\\cran.all.1400"))) {
             String line;
             boolean foundFirstDocument = false; // check if found first document
             //set up Lucene analyzer and indexing
