@@ -5,11 +5,16 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CranqrelFormatter {
     public static void main(String[] args) {
         String inputFilePath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\cranqrel"; 
         String outputFilePath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\cranqrel_formatted.txt";
+        
+        // Use a Set to keep track of unique queryID-docID pairs
+        Set<String> uniqueEntries = new HashSet<>();
         
         try (BufferedReader br = new BufferedReader(new FileReader(inputFilePath));
              BufferedWriter bw = new BufferedWriter(new FileWriter(outputFilePath))) {
@@ -26,8 +31,15 @@ public class CranqrelFormatter {
                     relevanceScore = "5"; // Replace -1 with 5
                 }
 
-                // Write in the new format: <query_id> 0 <document_id> <relevance_score>
-                bw.write(String.format("%s 0 %s %s\n", queryID, docID, relevanceScore));
+                // Create a unique key for each queryID-docID pair
+                String uniqueKey = queryID + "-" + docID;
+
+                // Check if this queryID-docID pair is already processed
+                if (!uniqueEntries.contains(uniqueKey)) {
+                    // If it's unique, add it to the set and write to the output file
+                    uniqueEntries.add(uniqueKey);
+                    bw.write(String.format("%s 0 %s %s\n", queryID, docID, relevanceScore));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
