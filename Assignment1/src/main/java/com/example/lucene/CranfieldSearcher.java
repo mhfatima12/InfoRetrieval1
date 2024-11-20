@@ -1,23 +1,24 @@
 package com.example.lucene;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Paths;
+
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.similarities.*;
+import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.search.Query;
-
-
-import java.io.*;
-import java.nio.file.Paths;
 
 public class CranfieldSearcher {
     private static String INDEX_DIRECTORY = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\index";
@@ -32,14 +33,8 @@ public class CranfieldSearcher {
             //StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
             EnglishAnalyzer engAnalyzer = new EnglishAnalyzer();
             //Analyzer whitespaceAnalyzer = new WhitespaceAnalyzer();
-
-            //pick Lucene similarity by commenting out the similarities you aren't using
-            //Lucene's original term frequency-inverse document frequency (TF-IDF) similarity
             indexSearcher.setSimilarity(new BM25Similarity());
-            //BM25 similarity
-            //indexSearcher.setSimilarity(new BM25Similarity());
-            //Instantiates the similarity with the default Î¼ value of 2000
-            //indexSearcher.setSimilarity(new LMDirichletSimilarity());
+            
 
             System.out.println("INDEX SIMILARITY " + indexSearcher.getSimilarity());
 
@@ -49,9 +44,8 @@ public class CranfieldSearcher {
                 int queryCount = 0;
 
                 while ((line = queryReader.readLine()) != null) {
-                    // if line startswith .w then read in line of data until line starts with .i
+                    
                     if (line.startsWith(".W")) {
-                        // get query ID
                         queryCount++;
                         StringBuilder queryText = new StringBuilder();
 
@@ -103,7 +97,7 @@ public class CranfieldSearcher {
         String similarityName = indexSearcher.getSimilarity().getClass().getSimpleName();
 
         String resultsFolderPath = "C:\\Users\\Maham Fatima\\Desktop\\InfoAssignment1\\Assignment1\\trec_eval_result";
-        String resultsFile = String.format("%s/trec_eval_results_%s_%s.txt", resultsFolderPath, analyzerName, similarityName);
+        String resultsFile = String.format("%s/resultsFile.txt", resultsFolderPath );
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFile, true))) {
             Query query = queryParser.parse(refinedQuery);
